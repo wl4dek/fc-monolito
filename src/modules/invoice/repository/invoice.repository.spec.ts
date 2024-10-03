@@ -9,6 +9,8 @@ describe("Invoice Repository test", () => {
   let sequelize: Sequelize;
 
   beforeEach(async () => {
+    jest.useFakeTimers("modern");
+    jest.setSystemTime(new Date("2022-03-01T14:30:00.000Z"));
     sequelize = new Sequelize({
       dialect: "sqlite",
       storage: ":memory:",
@@ -21,6 +23,7 @@ describe("Invoice Repository test", () => {
   });
 
   afterEach(async () => {
+    jest.useRealTimers();
     await sequelize.close();
   });
 
@@ -48,7 +51,10 @@ describe("Invoice Repository test", () => {
     const repository = new InvoiceRepository();
     await repository.generate(invoice);
 
-    const invoiceDb = await InvoiceModel.findOne({ where: { id: "1" } });
+    const invoiceDb = await InvoiceModel.findOne({
+      where: { id: "1" },
+      include: ItemInvoiceModel,
+    });
 
     expect(invoiceDb).toBeDefined();
     expect(invoiceDb.id).toEqual(invoice.id.id);
@@ -62,37 +68,56 @@ describe("Invoice Repository test", () => {
     expect(invoiceDb.zipcode).toEqual(invoice.address.zipCode);
     expect(invoiceDb.createdAt).toStrictEqual(invoice.createdAt);
     expect(invoiceDb.updatedAt).toStrictEqual(invoice.updatedAt);
+    expect(invoiceDb.items.length).toEqual(1);
   });
 
-  // it("should find a client", async () => {
-  //   const client = await ClientModel.create({
-  //     id: "1",
-  //     name: "Lucian",
-  //     email: "lucian@123.com",
-  //     document: "1234-5678",
-  //     street: "Rua 123",
-  //     number: "99",
-  //     complement: "Casa Verde",
-  //     city: "Criciúma",
-  //     state: "SC",
-  //     zipcode: "88888-888",
-  //     createdAt: new Date(),
-  //     updatedAt: new Date(),
-  //   });
-  //
-  //   const repository = new ClientRepository();
-  //   const result = await repository.find(client.id);
-  //
-  //   expect(result.id.id).toEqual(client.id);
-  //   expect(result.name).toEqual(client.name);
-  //   expect(result.email).toEqual(client.email);
-  //   expect(result.address.street).toEqual(client.street);
-  //   expect(result.address.number).toEqual(client.number);
-  //   expect(result.address.complement).toEqual(client.complement);
-  //   expect(result.address.city).toEqual(client.city);
-  //   expect(result.address.state).toEqual(client.state);
-  //   expect(result.address.zipCode).toEqual(client.zipcode);
-  //   expect(result.createdAt).toStrictEqual(client.createdAt);
-  //   expect(result.updatedAt).toStrictEqual(client.updatedAt);
-  // });
+  it("should find a invoice", async () => {
+    const invoice = await InvoiceModel.create(
+      {
+        id: "1",
+        name: "Lucian",
+        document: "1234-5678",
+        street: "Rua 123",
+        number: "99",
+        complement: "Casa Verde",
+        city: "Criciúma",
+        state: "SC",
+        zipcode: "88888-888",
+        items: [
+          {
+            id: "1",
+            name: "product teste",
+            price: 35,
+          },
+        ],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        include: ItemInvoiceModel,
+      },
+    );
+
+    const repository = new InvoiceRepository();
+    const result = await repository.find(invoice.id);
+    const item = new InvoiceItems({
+      id: new Id("1"),
+      name: "product teste",
+      price: 35,
+    });
+    expect(result.id.id).toEqual(invoice.id);
+    expect(result.name).toEqual(invoice.name);
+    expect(result.items.length).toEqual(1);
+    expect(result.items[0].id).toEqual(item.id);
+    expect(result.items[0].name).toEqual(item.name);
+    expect(result.items[0].price).toEqual(item.price);
+    expect(result.address.street).toEqual(invoice.street);
+    expect(result.address.number).toEqual(invoice.number);
+    expect(result.address.complement).toEqual(invoice.complement);
+    expect(result.address.city).toEqual(invoice.city);
+    expect(result.address.state).toEqual(invoice.state);
+    expect(result.address.zipCode).toEqual(invoice.zipcode);
+    expect(result.createdAt).toStrictEqual(invoice.createdAt);
+    expect(result.updatedAt).toStrictEqual(invoice.updatedAt);
+  });
 });

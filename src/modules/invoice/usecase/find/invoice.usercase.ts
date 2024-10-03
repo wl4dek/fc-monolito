@@ -28,10 +28,10 @@ export default class FindInvoiceUseCase {
         name: item.name,
         price: item.price,
       })),
-      total: 0,
+      total: invoice.items.reduce((acc, item) => acc + item.price, 0),
       createdAt: invoice.createdAt,
     };
-    output.total = invoice.items.reduce((acc, item) => acc + item.price, 0);
+
     return output;
   }
 }

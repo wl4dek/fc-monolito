@@ -2,32 +2,40 @@ import Address from "../../@shared/domain/value-object/address";
 import Id from "../../@shared/domain/value-object/id.value-object";
 import { Invoice, InvoiceItems } from "../domain/invoice.entity";
 import InvoiceGateway from "../gateway/invoice.gateway";
-import { InvoiceModel } from "./invoice.model";
+import { InvoiceModel, ItemInvoiceModel } from "./invoice.model";
 
 export default class InvoiceRepository implements InvoiceGateway {
   async generate(entity: Invoice): Promise<void> {
-    await InvoiceModel.create({
-      id: entity.id.id,
-      name: entity.name,
-      document: entity.document,
-      street: entity.address.street,
-      number: entity.address.number,
-      city: entity.address.city,
-      complement: entity.address.complement,
-      zipcode: entity.address.zipCode,
-      state: entity.address.state,
-      items: entity.items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-      })),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    await InvoiceModel.create(
+      {
+        id: entity.id.id,
+        name: entity.name,
+        document: entity.document,
+        street: entity.address.street,
+        number: entity.address.number,
+        city: entity.address.city,
+        complement: entity.address.complement,
+        zipcode: entity.address.zipCode,
+        state: entity.address.state,
+        items: entity.items.map((item) => ({
+          id: item.id.id,
+          name: item.name,
+          price: item.price,
+        })),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        include: ItemInvoiceModel,
+      },
+    );
   }
 
   async find(id: string): Promise<Invoice> {
-    const invoice = await InvoiceModel.findOne({ where: { id } });
+    const invoice = await InvoiceModel.findOne({
+      where: { id },
+      include: ItemInvoiceModel,
+    });
 
     if (!invoice) {
       throw new Error("Client not found");
